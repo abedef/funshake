@@ -362,17 +362,6 @@ In other words, we do eager evaluation but late interpretation.
          [the-argument (cdr the-lyrics)])
     (list the-name the-argument)))
 
-(define (is-self-ref? dialogue)
-  (if (member dialogue self-refs)
-      #t
-      #f))
-
-(define (is-name-lookup? dialogue dramatis-personae-map)
-  (or (is-self-ref? dialogue)
-      (not (equal?
-            0
-            (length (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map))))))
-
 (define (evaluate-description dialogue dramatis-personae-map)
   (void))
 
@@ -397,8 +386,8 @@ In other words, we do eager evaluation but late interpretation.
 (define (evaluate-expr expr name dramatis-personae-map)
   (let* (
          [word-count (length (string-split expr))] ; how many words are in the expression?
-         [is-name-lookup (if (= word-count 1) (is-name-lookup? expr) #f)] ; is it a name lookup?
-         [name-lookup-value (if is-name-lookup (evaluate-name expr) #f)] ; if it is a lookup, what is the value?
+         [is-name-lookup (if (= word-count 1) (is-name-lookup? expr dramatis-personae-map) #f)] ; is it a name lookup?
+         [name-lookup-value (if is-name-lookup (evaluate-name name expr dramatis-personae-map) #f)] ; if it is a lookup, what is the value?
          [is-description (or (not is-name-lookup) (> word-count 1))] ; is it a description?
          )
     (if is-name-lookup
@@ -406,13 +395,15 @@ In other words, we do eager evaluation but late interpretation.
         (evaluate-dramatis-description expr))))
 
 (define (is-self-ref? dialogue)
-  (void))
+  (if (member dialogue self-refs)
+      #t
+      #f))
 
-(define (is-name-lookup? name dramatis-personae-map)
-  (void))
-
-(define (evaluate-name speaker dialogue dramatis-personae)
-  (void))
+(define (is-name-lookup? dialogue dramatis-personae-map)
+  (or (is-self-ref? dialogue)
+      (not (equal?
+            0
+            (length (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map))))))
 
 ; returns true if and only if the text is a description
 ; in particular, it cannot be a functor call or an arithmetic expression
