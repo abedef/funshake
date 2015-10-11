@@ -59,6 +59,8 @@ Read through the starter code carefully. In particular, look for:
 (define param "Hamlet")
 
 (define description-type "description")
+(define lookup-type "lookup")
+
 ;------------------------------------------------------------------------------
 ; Interpreter driver
 ;------------------------------------------------------------------------------
@@ -370,8 +372,15 @@ In other words, we do eager evaluation but late interpretation.
       (evaluate-name speaker speaker dramatis-personae-map)
       (second (first (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map)))))
 
-(define (evaluate-function-call name dialogue function-name function-argument settings-map dramatis-personae-map)
-  (void))
+(define (evaluate-function-call speaker dialogue function-name function-argument settings-map dramatis-personae-map)
+  (let* ([func-body (get-func-body function-name settings-map)] ; get function body
+         [arg-type (cond [(is-description function-argument) description-type]
+                         [(is-arithmetic function-argument) (typeof-arithmetic function-argument)]
+                         [(= 1 (length (string-split function-argument))) (if (is-name-lookup? function-argument dramatis-personae-map) lookup-type description-type)])]
+         [arg-val (cond [(equal? arg-type description-type) (evaluate-dramatis-description function-argument)]
+                         [(or (equal? arg-type add) (equal? arg-type add)) (evaluate-top-level-arithmetic speaker function-argument arg-type dramatis-personae-map)]
+                         [(equal? arg-type lookup-type) (evaluate-name function-argument)])])
+    (call-function func-body arg-val settings-map dramatis-personae-map)))
 
 ; returns the value of the pair in the settings map with function name as the name
 ; precondition: function-name is a valid function name
