@@ -1,2 +1,2 @@
-# 324-a1
-a1
+# Funshake
+CSC324 A1 implementation of the Functional Shakespeare language in Racket Scheme.
