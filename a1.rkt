@@ -126,9 +126,10 @@ Read through the starter code carefully. In particular, look for:
   it just outputs the semantically meaningful lines in the file.
 |#
 (define (evaluate body)
-;  (let* ([dramatis-personae (get-dramatis-personae body)]
-;         [settings (get-settings body)])
-    body)
+  (let* ([dramatis-personae (get-dramatis-personae body)]
+         [settings (get-settings body)]
+         [dialogues (get-dialogues body dramatis-personae settings)])
+    dialogues))
 
 #|
   This section of the code is to get the dramatis personae
@@ -142,7 +143,7 @@ Read through the starter code carefully. In particular, look for:
 ; which are supposed to stand for the name of the person
 ; and the value of their description
 (define (get-dramatis-personae body)
-  (map evaluate-dramatis (get-elements-between personae finis)))
+  (map evaluate-dramatis (get-elements-between body personae finis)))
 
 ; helper function to evaluate the dramatis personae
 ; to be used as as a functor input to map in get-dramatis-personae
@@ -319,7 +320,6 @@ In other words, we do eager evaluation but late interpretation.
            ; general dialogue info
            [name (first name-dialogue-pair)] ; the name of the person talking
            [dialogue (second name-dialogue-pair)] ; the dialogue: what the person is saying
-           [self-referencing (is-self-referencing? name dialogue)] ; #t if the person references himself
            
            ; function call info
            [is-function-call (is-functor-call dialogue)] ; #t if the dialogue is a function call
@@ -332,11 +332,11 @@ In other words, we do eager evaluation but late interpretation.
            [arithmetic-type (if is-top-level-arithmetic (typeof-arithmetic dialogue) #f)] ; type of arithmetic: + or *
 
            ; other info
-           [is-description (if (and (not is-function-call) (not is-top-level-arithmetic) (not self-referencing)) #t #f)] ; easy case: dialogue is simply a description to be evaluated
+           [is-description (if (and (not is-function-call) (not is-top-level-arithmetic)) #t #f)] ; easy case: dialogue is simply a description to be evaluated
            )
       (cond [is-description (evaluate-description dialogue dramatis-personae-map)]
-            [is-function-call (evaluate-function-call dialogue function-name function-argument settings-map dramatis-personae-map self-referencing)]
-            [is-top-level-arithmetic (evaluate-top-level-arithmetic dialogue arithmetic-type self-referencing)]))))
+            [is-function-call (evaluate-function-call name dialogue function-name function-argument settings-map dramatis-personae-map)]
+            [is-top-level-arithmetic (evaluate-top-level-arithmetic name dialogue arithmetic-type)]))))
 
 ; helper that returns true if and only if the dialogue contains
 ; a self reference
@@ -365,10 +365,10 @@ In other words, we do eager evaluation but late interpretation.
 (define (evaluate-description dialogue dramatis-personae-map)
   (void))
 
-(define (evaluate-function-call dialogue function-name function-argument settings-map dramatis-personae-map self-referencing)
+(define (evaluate-function-call name dialogue function-name function-argument settings-map dramatis-personae-map)
   (void))
 
-(define (evaluate-top-level-arithmetic dialogue arithmetic-type self-referencing)
+(define (evaluate-top-level-arithmetic name dialogue arithmetic-type)
   (void))
 
 ; returns true if and only if the text is a description
