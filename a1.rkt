@@ -129,7 +129,7 @@ Read through the starter code carefully. In particular, look for:
   (let* ([dramatis-personae (get-dramatis-personae body)]
          [settings (get-settings body)]
          [dialogues (get-dialogues body dramatis-personae settings)])
-    dialogues))
+    body))
 
 #|
   This section of the code is to get the dramatis personae
@@ -288,7 +288,7 @@ In other words, we do eager evaluation but late interpretation.
 ; to be top level expressions we don't need to do any wizardry by
 ; checking for nested function calls. (in this case we'd need an actual lexer and parser)
 (define (is-functor-call text)
-  (starts-with call text))
+  (prefix? call text))
 
 ; helper function that takes the body list given
 ; to evaluate and returns a list of (speaker, evaluation of description)
@@ -307,7 +307,7 @@ In other words, we do eager evaluation but late interpretation.
   (if (null? body)
       acc
       (if (list? (member #\: (string->list (car body)))) ; if we find the colon indicating a dialogue
-          (get-name-dialogue-pairs (cdr (cdr body)) (append acc (list (list (car body) (car (cdr body))))))
+          (get-name-dialogue-pairs (cdr (cdr body)) (append acc (list (list (remove-last-char (car body)) (car (cdr body))))))
           (get-name-dialogue-pairs (cdr body) acc))))
 
 ; helper function that takes in the dramatis personae and the settings
@@ -362,8 +362,24 @@ In other words, we do eager evaluation but late interpretation.
          [the-argument (cdr the-lyrics)])
     (list the-name the-argument)))
 
+(define (is-self-ref? dialogue)
+  (if (member dialogue self-refs)
+      #t
+      #f))
+
+(define (is-name-lookup? dialogue dramatis-personae-map)
+  (or (is-self-ref? dialogue)
+      (not (equal?
+            0
+            (length (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map))))))
+
 (define (evaluate-description dialogue dramatis-personae-map)
   (void))
+
+(define (evaluate-name speaker dialogue dramatis-personae-map)
+  (if (is-self-ref? dialogue)
+      (evaluate-name speaker speaker dramatis-personae-map)
+      (second (first (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map)))))
 
 (define (evaluate-function-call name dialogue function-name function-argument settings-map dramatis-personae-map)
   (void))
@@ -410,14 +426,6 @@ In other words, we do eager evaluation but late interpretation.
           (cons (car lst) (get-elements-until (cdr lst) i2))
           (list))))
 
-; helper function that takes in a start string and a
-; string and checks to see whether str starts with start.
-; starts-with and prefix? are equivalent
-(define (starts-with start str)
-  (let* ([start-list (string->list start)]
-         [str-list (string->list str)])
-    (list-starts-with start-list str-list)))
-
 ; helper function for starts-with: checks if str-list starts
 ; with start-list
 (define (list-starts-with start-list str-list)
@@ -441,6 +449,17 @@ In other words, we do eager evaluation but late interpretation.
         ((list-starts-with sub lst) 0)
         ((not (list-starts-with sub lst)) (add-functor 1 (sublist sub (cdr lst))))
         ))
+
+#|
+(remove-last-char string)
+  string: a string
+
+  Returns string with its last letter removed.
+|#
+(define (remove-last-char string)
+  (if (equal? (string-length string) 0)
+      string
+      (substring string 0 (- (string-length string) 1))))
 
 (define bdy (interpret "functions.txt"))
 (define functors (get-elements-between bdy settings finis))
