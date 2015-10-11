@@ -129,7 +129,7 @@ Read through the starter code carefully. In particular, look for:
   (let* ([dramatis-personae (get-dramatis-personae body)]
          [settings (get-settings body)]
          [dialogues (get-dialogues body dramatis-personae settings)])
-    dialogues))
+    body))
 
 #|
   This section of the code is to get the dramatis personae
@@ -326,17 +326,17 @@ In other words, we do eager evaluation but late interpretation.
            [function-name-and-arg (get-function-name-and-arg dialogue)]
            [function-name (if is-function-call (first function-name-and-arg) #f)] ; name of the function if there is a function call
            [function-argument (if is-function-call (second function-name-and-arg) #f)] ; the argument to the function if it exists
-
+           
            ; arithmetic info
            [is-top-level-arithmetic (if (and (not is-function-call) (is-arithmetic dialogue)) #t #f)] ; #t if the dialogue has top level arithmetic, #f otherwise
            [arithmetic-type (if is-top-level-arithmetic (typeof-arithmetic dialogue) #f)] ; type of arithmetic: + or *
-
+           
            ; other info
            [is-description (if (and (not is-function-call) (not is-top-level-arithmetic)) #t #f)] ; easy case: dialogue is simply a description to be evaluated
            )
-      (cond [is-description (evaluate-description dialogue dramatis-personae-map)]
+      (cond [is-description (evaluate-dramatis-description dialogue)]
             [is-function-call (evaluate-function-call name dialogue function-name function-argument settings-map dramatis-personae-map)]
-            [is-top-level-arithmetic (evaluate-top-level-arithmetic name dialogue arithmetic-type)]))))
+            [is-top-level-arithmetic (evaluate-top-level-arithmetic name dialogue arithmetic-type dramatis-personae-map)]))))
 
 ; helper that returns true if and only if the dialogue contains
 ; a self reference
@@ -368,7 +368,34 @@ In other words, we do eager evaluation but late interpretation.
 (define (evaluate-function-call name dialogue function-name function-argument settings-map dramatis-personae-map)
   (void))
 
-(define (evaluate-top-level-arithmetic name dialogue arithmetic-type)
+(define (evaluate-top-level-arithmetic name dialogue arithmetic-type dramatis-personae-map)
+  (let* ([op-functor (if (equal? arithmetic-type add) + *)]
+         [exprs (string-split dialogue arithmetic-type)]
+         [expr1 (normalize-line (first exprs))]
+         [expr2 (normalize-line (second exprs))]
+         [expr1-evaluated (evaluate-expr expr1 name dramatis-personae-map)]
+         [expr2-evaluated (evaluate-expr expr2 name dramatis-personae-map)]
+         [result (op-functor expr1-evaluated expr2-evaluated)])
+    result))
+
+(define (evaluate-expr expr name dramatis-personae-map)
+  (let* (
+         [word-count (length (string-split expr))] ; how many words are in the expression?
+         [is-name-lookup (if (= word-count 1) (is-name-lookup? expr) #f)] ; is it a name lookup?
+         [name-lookup-value (if is-name-lookup (evaluate-name expr) #f)] ; if it is a lookup, what is the value?
+         [is-description (or (not is-name-lookup) (> word-count 1))] ; is it a description?
+         )
+    (if is-name-lookup
+        name-lookup-value
+        (evaluate-dramatis-description expr))))
+
+(define (is-self-ref? dialogue)
+  (void))
+
+(define (is-name-lookup? name dramatis-personae-map)
+  (void))
+
+(define (evaluate-name speaker dialogue dramatis-personae)
   (void))
 
 ; returns true if and only if the text is a description
@@ -426,8 +453,8 @@ In other words, we do eager evaluation but late interpretation.
       (if (null? start-list)
           #t
           (if (equal? (car start-list) (car str-list))
-          (and #t (list-starts-with (cdr start-list) (cdr str-list)))
-          #f))))
+              (and #t (list-starts-with (cdr start-list) (cdr str-list)))
+              #f))))
 
 (define (add-functor num bool)
   (if (and (boolean? bool) (equal? bool #f))
@@ -444,4 +471,6 @@ In other words, we do eager evaluation but late interpretation.
 
 (define bdy (interpret "functions.txt"))
 (define functors (get-elements-between bdy settings finis))
+(define dramatis (get-dramatis-personae bdy))
+(define gsettings (get-settings bdy))
 (define name-dialogue-pairs (get-name-dialogue-pairs bdy (list)))
