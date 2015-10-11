@@ -373,6 +373,12 @@ In other words, we do eager evaluation but late interpretation.
 (define (evaluate-function-call name dialogue function-name function-argument settings-map dramatis-personae-map)
   (void))
 
+; returns the value of the pair in the settings map with function name as the name
+; precondition: function-name is a valid function name
+(define (get-func-body function-name settings-map)
+  (second (first (filter (lambda (pair) (equal? (first pair) function-name)) settings-map))))
+  
+
 (define (evaluate-top-level-arithmetic name dialogue arithmetic-type dramatis-personae-map)
   (let* ([op-functor (if (equal? arithmetic-type add) + *)]
          [exprs (string-split dialogue arithmetic-type)]
