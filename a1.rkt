@@ -140,23 +140,40 @@ Read through the starter code carefully. In particular, look for:
   as program constants.
 |#
 
-; helper function that takes the body list given
-; to evaluate and returns a list of name value pairs
-; which are supposed to stand for the name of the person
-; and the value of their description
+#|
+  (get-dramatis-personae body)
+  body: the list of semantically meaningful lines in a funshake file.
+
+  Returns a map (i.e a list of (name, value) pairs) where the name/key is
+  the name of the person in the play, and their value is the value obtained
+  when calculating their description via evaluate-dramatis-description (see ahead).
+
+|#
 (define (get-dramatis-personae body)
   (map evaluate-dramatis (get-elements-between body personae finis)))
 
-; helper function to evaluate the dramatis personae
-; to be used as as a functor input to map in get-dramatis-personae
+#|
+  (evaluate-dramatis dramatis)
+  dramatis: a dramatis personae line extracted from the Dramatis Personae section
+  in a funshake file.
+
+  Returns a (name, value) pair where the name is the name of the person in the play
+  and value is the value of their description, as calculated by evaluate-dramatis-description.
+|#
 (define (evaluate-dramatis dramatis)
   (let* ([name-description-pair (string-split dramatis ",")]
          [name (first name-description-pair)]
          [description (second name-description-pair)])
     (list name (evaluate-dramatis-description description))))
 
-; helper that takes a description from a name-description pair
-; and returns the number value of it. 
+#|
+  (evaluate-dramatis-description description)
+  description: the description of a person declared in the dramatis personae
+  section of a funshake file.
+
+  Returns the numerical value of the description of the given description, as 
+  entailed in the functional shakespeare specification.
+|#
 (define (evaluate-dramatis-description description)
   (let* ([description-list (string-split description)]
          [description-length (length description-list)]
@@ -164,8 +181,14 @@ Read through the starter code carefully. In particular, look for:
          )
     (calculate-description description-length bad-adjective-count)))
 
-; helper function that calculates the description value based
-; on the given length and bad adjective count
+#|
+  (calculate-description description-length bad-adjective-count)
+  description: the description of a person declared in the dramatis personae
+  section of a funshake file.
+
+  Returns the numerical value of the description of the given description, as 
+  entailed in the functional shakespeare specification.
+|#
 (define (calculate-description description-length bad-adjective-count)
   (if (= bad-adjective-count 0)
       description-length
