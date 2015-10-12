@@ -348,7 +348,7 @@ Read through the starter code carefully. In particular, look for:
   (let* ([the-song (normalize-line (car (string-split dialogue call)))]
          [the-lyrics (string-split the-song)]
          [the-name (first the-lyrics)]
-         [the-argument (foldr (lambda (x y) (string-append " " (string-append x y))) "" (cddr the-lyrics))])
+         [the-argument (remove-first-char (foldr (lambda (x y) (string-append " " (string-append x y))) "" (cddr the-lyrics)))])
     (list the-name the-argument)))
 
 #|
@@ -474,6 +474,11 @@ Read through the starter code carefully. In particular, look for:
   (if (equal? (string-length string) 0)
       string
       (substring string 0 (- (string-length string) 1))))
+
+(define (remove-first-char string)
+  (if (equal? (string-length string) 0)
+      string
+      (substring string 1 (string-length string))))
 
 ;(define functors (get-elements-between body settings finis))
 ;(define dramatis (get-dramatis-personae body))
