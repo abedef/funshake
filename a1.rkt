@@ -183,41 +183,63 @@ Read through the starter code carefully. In particular, look for:
 
 #|
   (calculate-description description-length bad-adjective-count)
-  description: the description of a person declared in the dramatis personae
-  section of a funshake file.
+  description-length: the number of words in the description we want to evaluate.
+  bad-adjective-count: the number of bad adjectives in the description we want to evaluate.
 
-  Returns the numerical value of the description of the given description, as 
-  entailed in the functional shakespeare specification.
+  Returns the numerical value of the description given the number of words of the
+  description and the number of bad adjectives that arise in it.
 |#
 (define (calculate-description description-length bad-adjective-count)
   (if (= bad-adjective-count 0)
       description-length
       (* -1 (expt 2 bad-adjective-count) description-length)))
 
-; helper function that counts how many bad adjectives
-; are in the given description-list. 
+#|
+  (count-bad-adjectives description-list)
+  description-list: the description of a character in the play as a list of strings.
+
+  Returns the number of bad adjectives in the given description.
+|# 
 (define (count-bad-adjectives description-list)
   (length (filter (lambda (str) (not (equal? (member str bad-words) #f))) description-list)))
 
-; helper function that takes the body list given
-; to evaluate and returns a list of function evaluation
-; rule pairs which are supposed to be equivalent to the function
-; definition provided in the funshake file
+#|
+  
+  This section is for obtaining the settings section of a 
+  funshake file (if it exists).
+
+|#
+
+#|
+  (get-settings body)
+  body: the list of semantically meaningful lines in a funshake file.
+
+  Returns a list of (name, value) pairs where 'name' is the name of the
+  setting/function and value is its definition.
+|#
 (define (get-settings body)
   (map evaluate-setting (get-elements-between body settings finis)))
 
-; helper function to evaluate the settings
-; to be used as a functor input to map in get-settings
+#|
+  (evaluate-setting setting)
+  setting: a line of text that lies between the Settings and Finis lines in a funshake file.
+
+  Returns a (name, value) pair where 'name' refers to the name of the setting and 'value'
+  refers to its definition.
+|#
 (define (evaluate-setting setting)
   (let* ([name-description-pair (string-split setting ",")]
          [name (first name-description-pair)]
          [description (normalize-line (second name-description-pair))]) ; after normalizing the description we can safely check for whether it is a functor call or not
     (list name description))) ; defer functor evaluation until we get to dialogue
 
-; returns true if and only if the description of the function
-; is itself a function call. Since funshake requires functions
-; to be top level expressions we don't need to do any wizardry by
-; checking for nested function calls. (in this case we'd need an actual lexer and parser)
+#|
+  (is-functor-call text)
+  text: a segment of semantically meaningful funshake text. This could be within a function
+  definition or a line of dialogue.
+
+  Returns true if and only if text has a top level function call.
+|#
 (define (is-functor-call text)
   (prefix? call text))
 
