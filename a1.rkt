@@ -243,19 +243,30 @@ Read through the starter code carefully. In particular, look for:
 (define (is-functor-call text)
   (prefix? call text))
 
-; helper function that takes the body list given
-; to evaluate and returns a list of (speaker, evaluation of description)
-; pairs. The function is also given the dramatis personae map created
-; in get-dramatis-personae and the settings map created in get-settings
-; in order to evaluate dialogue descriptions (which may be function calls,
-; name lookups, etc.)
+#|
+  (get-dialogues body dramatis-personae-map settings-map)
+  body: the list of semantically meaningful lines in a funshake text file.
+  dramatis-personae-map: the map obtained after calling get-dramatis-personae above, which
+  is a list of (name, value) pairs where 'name' refers to the name of the person in the play,
+  and 'value' refers to the value of the description.
+  settings-map: the map obtained after calling get-settings above. 
+
+  Returns a list of numbers, which correspond to the evaluated lines of dialogue in the funshake
+  file.
+|#
 (define (get-dialogues body dramatis-personae-map settings-map)
   (let* ([name-dialogue-pairs (get-name-dialogue-pairs body (list))])
     (map (lambda (pair) (eval-pair (first pair) (second pair) dramatis-personae-map settings-map)) name-dialogue-pairs)))
 
-; helper function that takes the body of the program
-; and returns a list of name dialogue pairs that are supposed
-; to represent all the dialogues in the program.
+#|
+  (get-name-dialogue-pairs body acc)
+  body: the list of semantically meaningful lines in a funshake file.
+  acc: accumulator list that must be initially empty that accumulates (speaker, dialogue) pairs
+  from the funshake file.
+
+  Returns a list of (speaker, dialogue) pairs that correspond to lines of dialogue said by the speaker
+  in the funshake file.
+|#
 (define (get-name-dialogue-pairs body acc)
   (if (null? body)
       acc
@@ -263,10 +274,19 @@ Read through the starter code carefully. In particular, look for:
           (get-name-dialogue-pairs (cdr (cdr body)) (append acc (list (list (remove-last-char (car body)) (car (cdr body))))))
           (get-name-dialogue-pairs (cdr body) acc))))
 
-; helper function that takes in the dramatis personae and the settings
-; and returns a lambda that takes in a name-dialogue pair
-; that is able to evaluate the dialogue. evaluating the dialogue
-; is the heart of a funshake program
+#|
+  (eval-pair speaker dialogue dramatis-personae-map settings-map [hamlet])
+  speaker: the speaker of the dialogue we are currently evaluating
+  dialogue: the dialogue we want to evaluate.
+  dramatis-personae-map: the map obtained after calling get-dramatis-personae above, which
+  is a list of (name, value) pairs where 'name' refers to the name of the person in the play,
+  and 'value' refers to the value of the description.
+  settings-map: the map obtained after calling get-settings above. 
+  hamlet: optional paramter that is passed only when functions are called: if it is not needed, then it is not used.
+
+  Returns the value of the given dialogue as a number, as specified in the functional shakespeare specification.
+
+|#
 (define (eval-pair speaker dialogue dramatis-personae-map settings-map [hamlet (void)])
   (cond [(is-functor-call dialogue)
          (let* ([function-name-and-arg (get-function-name-and-arg dialogue)]
@@ -277,10 +297,36 @@ Read through the starter code carefully. In particular, look for:
         [(and (= 1 (length (string-split dialogue))) (is-name-lookup? dialogue dramatis-personae-map)) (evaluate-name speaker dialogue dramatis-personae-map hamlet)]
         [else (evaluate-dramatis-description dialogue)]))
 
+#|
+  (eval-function speaker function-name function-argument dramatis-personae-map settings-map [hamlet])
+  speaker: current speaker of the dialogue
+  function-name: the name of the function we want to evaluate.
+  function-argument: the argument to the function we want to evaluate.
+  dramatis-personae-map: the map obtained after calling get-dramatis-personae above, which
+  is a list of (name, value) pairs where 'name' refers to the name of the person in the play,
+  and 'value' refers to the value of the description.
+  settings-map: the map obtained after calling get-settings above.
+  hamlet: optional paramter that is passed only when functions are called: if it is not needed, then it is not used.
+
+  Returns the value of the function call 'function-name(function-argument)' as specified by functional shakespeare.
+|#
 (define (eval-function speaker function-name function-argument dramatis-personae-map settings-map [hamlet (void)])
   (eval-pair speaker (get-func-body function-name settings-map) dramatis-personae-map
              settings-map (eval-pair speaker function-argument dramatis-personae-map settings-map hamlet)))
 
+#|
+  (evaluate-top-level-arithmetic name dialogue arithmetic-type dramatis-personae-map settings-map [hamlet])
+  name: name of the current speaker of the dialogue
+  dialogue: the dialogue we want to evaluate.
+  arithmetic-type: the type of arithmetic we are evaluating (could be + or *)
+  dramatis-personae-map: the map obtained after calling get-dramatis-personae above, which
+  is a list of (name, value) pairs where 'name' refers to the name of the person in the play,
+  and 'value' refers to the value of the description.
+  settings-map: the map obtained after calling get-settings above.
+  hamlet: optional paramter that is passed only when functions are called: if it is not needed, then it is not used.
+
+  Returns the value of the arithmetic expression given by dialogue.
+|#
 (define (evaluate-top-level-arithmetic name dialogue arithmetic-type dramatis-personae-map settings-map [hamlet (void)])
   (let* ([op-functor (if (equal? arithmetic-type add) + *)]
          [exprs (string-split dialogue arithmetic-type)]
@@ -291,6 +337,13 @@ Read through the starter code carefully. In particular, look for:
          [result (op-functor expr1-evaluated expr2-evaluated)])
     result))
 
+#|
+  (get-function-name-and-arg dialogue)
+  dialogue: a piece of dialogue/function definition that contains a function call.
+
+  Returns a name value pair with the name of the function as the first of the pair, and 
+  the argument given to the function as the second of the pair.
+|#
 (define (get-function-name-and-arg dialogue)
   (let* ([the-song (normalize-line (car (string-split dialogue call)))]
          [the-lyrics (string-split the-song)]
@@ -298,16 +351,43 @@ Read through the starter code carefully. In particular, look for:
          [the-argument (foldr (lambda (x y) (string-append " " (string-append x y))) "" (cddr the-lyrics))])
     (list the-name the-argument)))
 
+#|
+  (evaluate-name speaker dialogue dramatis-personae-map [hamlet])
+  speaker: the speaker whose dialogue we want to evaluate
+  dialogue: a semantically meaningful expression in funshake
+  dramatis-personae-map: the map obtained after calling get-dramatis-personae above, which
+  is a list of (name, value) pairs where 'name' refers to the name of the person in the play,
+  and 'value' refers to the value of the description.
+  settings-map: the map obtained after calling get-settings above.
+  hamlet: optional paramter that is passed only when functions are called: if it is not needed, then it is not used.
+
+  Returns the value of the given dialogue; if it is a name, a name lookup is performed. If it is a function argument,
+  the value of hamlet is injected as an argument.
+|#
 (define (evaluate-name speaker dialogue dramatis-personae-map [hamlet (void)])
   (cond [(is-self-ref? dialogue) (evaluate-name speaker speaker dramatis-personae-map hamlet)]
         [(and (not (void? hamlet)) (equal? dialogue param)) hamlet]
         [else (second (first (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map)))]))
 
-; returns the value of the pair in the settings map with function name as the name
-; precondition: function-name is a valid function name
+#|
+  (get-func-body function-name settings-map)
+  function-name: the name of the function we want to look up.
+  settings-map: the map obtained after calling get-settings above.
+
+  precondition: given function-name must exist as a function.
+
+  Return the function body of the given function name (in particular, its definition as stated in the
+  settings section).
+|#
 (define (get-func-body function-name settings-map)
   (second (first (filter (lambda (pair) (equal? (first pair) function-name)) settings-map))))
 
+#|
+  (is-self-ref? dialogue)
+  dialogue: semantically meaningful funshake.
+
+  Return true if an only if the given dialogue is a self reference.
+|#
 (define (is-self-ref? dialogue)
   (if (member dialogue self-refs)
       #t
