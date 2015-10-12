@@ -328,7 +328,7 @@ In other words, we do eager evaluation but late interpretation.
 
 (define (eval-function speaker function-name function-argument dramatis-personae-map settings-map [hamlet (void)])
   (eval-pair speaker (get-func-body function-name settings-map) dramatis-personae-map
-             settings-map (eval-pair speaker function-argument dramatis-personae-map settings-map)))
+             settings-map (eval-pair speaker function-argument dramatis-personae-map settings-map hamlet)))
 
 (define (evaluate-top-level-arithmetic name dialogue arithmetic-type dramatis-personae-map settings-map [hamlet (void)])
   (let* ([op-functor (if (equal? arithmetic-type add) + *)]
@@ -415,7 +415,8 @@ In other words, we do eager evaluation but late interpretation.
   (or (is-self-ref? dialogue)
       (not (equal?
             0
-            (length (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map))))))
+            (length (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map))))
+      (equal? dialogue param)))
 
 ; returns true if and only if the text is a description
 ; in particular, it cannot be a functor call or an arithmetic expression
@@ -491,9 +492,8 @@ In other words, we do eager evaluation but late interpretation.
       string
       (substring string 0 (- (string-length string) 1))))
 
-(define body (interpret "functions.txt"))
 ;(define functors (get-elements-between body settings finis))
 ;(define dramatis (get-dramatis-personae body))
 ;(define gsettings (get-settings bdy))
 ;(define name-dialogue-pairs (get-name-dialogue-pairs bdy (list)))
-(define body2 (interpret "sample.txt"))
+(define body2 (interpret "functions.txt"))
