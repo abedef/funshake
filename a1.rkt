@@ -268,6 +268,14 @@ Read through the starter code carefully. In particular, look for:
       #t
       #f))
 
+#|
+(is-name-lookup? dialogue dramatis-personae-map)
+  dialogue: a string
+  dramatis-personae-map: the name-value pairs of the dramatis personae of the play being
+  interpreted
+
+  Returns true if and only if dialogue is either a self reference, a name in dramatis personae, or Hamlet.
+|#
 (define (is-name-lookup? dialogue dramatis-personae-map)
   (or (is-self-ref? dialogue)
       (not (equal?
@@ -275,7 +283,12 @@ Read through the starter code carefully. In particular, look for:
             (length (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map))))
       (equal? dialogue param)))
 
-; returns true if and only if text is of arithmetic type
+#|
+(is-arithmetic text)
+  text: a string
+
+  Returns true if and only if text is an arithmetic expression
+|#
 (define (is-arithmetic text)
   (let* ([contains-joind (not (equal? (first (string-split text add)) text))]
          [contains-entrancd (not (equal? (first (string-split text mult)) text))])
@@ -283,7 +296,13 @@ Read through the starter code carefully. In particular, look for:
         #t
         #f)))
 
-; precondition: text must be of arithmetic type
+#|
+(typeof-arithmetic text)
+  text: a string
+
+  Returns the `add` constant if the text contains 'join'd with' and mult if the
+  text contains 'entranc'd by'.
+|#
 (define (typeof-arithmetic text)
   (let* ([contains-joind (not (equal? (first (string-split text add)) text))]
          [contains-entrancd (not (equal? (first (string-split text mult)) text))])
@@ -291,9 +310,14 @@ Read through the starter code carefully. In particular, look for:
         add
         mult)))
 
-; helper function: given a list and two elements belonging 
-; to it, get the sublist [i1,...,i2]. This will aid in
-; getting dramatis personae and settings. 
+#|
+(get-elements-between lst i1 i2)
+  lst: a list you want to scan, that contains i1 and i2
+  i1: an element of list
+  i2: an element of lst
+
+  Returns the list of elements in lst between element i1 and i2
+|#
 (define (get-elements-between lst i1 i2)
   (if (null? lst)
       null
@@ -301,7 +325,13 @@ Read through the starter code carefully. In particular, look for:
           (get-elements-between (cdr lst) i1 i2)
           (append null (get-elements-until (cdr lst) i2)))))
 
-; helper function for get-elements-between
+#|
+(get-elements-until lst i2)
+  lst: a list you want to scan, that contains i2
+  i2: an element of lst
+
+  Returns the list of elements in lst up until we reach element i2
+|#
 (define (get-elements-until lst i2)
   (if (null? lst)
       null
@@ -313,7 +343,7 @@ Read through the starter code carefully. In particular, look for:
 (remove-last-char string)
   string: a string
 
-  Returns string with its last letter removed.
+  Returns string with its last character removed.
 |#
 (define (remove-last-char string)
   (if (equal? (string-length string) 0)
