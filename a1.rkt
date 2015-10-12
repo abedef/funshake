@@ -176,45 +176,6 @@ Read through the starter code carefully. In particular, look for:
 (define (count-bad-adjectives description-list)
   (length (filter (lambda (str) (not (equal? (member str bad-words) #f))) description-list)))
 
-#|
-
-This section is for the settings section in a funshake program.
-Settings define functions that can be called in a funshake program.
-Each function can accept an argument, and it is possible that the function
-does not use this argument, called a Hamlet. Functions can call other
-functions, which can call other functions, and so on.
-
-Notice that functions in funshake have the following property: in order
-for them to be evaluated, we need the following syntax:
-
-       "The song of <func-name> and <func-arg>"
-
-The reason we don't have to directly translate funshake functions into
-scheme functions is that we can defer all translation until the body
-of the function virtually becomes a description. Since descriptions are
-much easier to evaluate, we evaluate the description, and we're done.
-
-So in order to evaluate <func-name> as function, we first need to look at
-<func-arg>, and evaluate that. One thing to take advantage of is that
-<func-arg> *cannot* be a function call: it must be a description of some sort.
-Since this is the case, the only other possiblities are a multiplication operation,
-an addition operation, or some other constant (description).
-
-In other words, we do eager evaluation but late interpretation.
-
-|#
-
-; this function takes the settings map created in
-; get-settings and resolves all function calls made
-; inside other functions. Since the functions can be declared
-; and called in any order, we cannot rely on order in funshake
-; to help us in resolving function definitions
-; since functions can call other functions there may be a call stack
-; an arbitrary number of levels deep; thus, we will need to go to the top
-; of this stack and resolve the calls from the top to bottom.
-(define (resolve-functors settings-map)
-  (void))
-
 ; helper function that takes the body list given
 ; to evaluate and returns a list of function evaluation
 ; rule pairs which are supposed to be equivalent to the function
@@ -229,61 +190,6 @@ In other words, we do eager evaluation but late interpretation.
          [name (first name-description-pair)]
          [description (normalize-line (second name-description-pair))]) ; after normalizing the description we can safely check for whether it is a functor call or not
     (list name description))) ; defer functor evaluation until we get to dialogue
-
-; helper function that takes in a function description in funshake
-; and returns a functor that is the representation of this description
-; in racket/scheme
-(define (get-functor description)
-  (let* ([is-function-call (is-functor-call description)])
-    (get-functor-helper is-function-call description)))
-
-(define (get-functor-helper is-function-call description)
-  (if is-function-call ; if its a function call we can't evaluate it yet
-      description      ; so just return the description
-      (evaluate-functor description))) ; otherwise evaluate the description
-
-(define (evaluate-functor description)
-  (let* ([is-description (is-description description)]
-         [is-arithmetic (is-arithmetic description)])
-    (if is-description
-        (create-description-functor description)
-        (if (equal? (typeof-arithmetic description) add)
-            (create-op-functor description add +)
-            (create-op-functor description mult *)))))
-
-; helper function that returns a lambda that is supposed
-; to return the value of the given description. 
-(define (create-description-functor description)
-  (lambda (hamlet) (evaluate-dramatis-description description))) ; hamlet is unused here
-
-; generic functor generator for arithmetic operations. Given an
-; arithmetic operation and a functor that performs the same operation
-; in racket, return a functor that is the equivalent of the funshake
-; function specification in racket. 
-(define (create-op-functor description operation functor)
-  (let* ([expr (string-split description operation)]
-         [arg-1 (normalize-line (first expr))]
-         [arg-2 (normalize-line (second expr))]
-         [arg-types (get-arg-types arg-1 arg-2)])
-    (create-functor-helper arg-1 arg-2 arg-types functor)))
-
-(define (get-arg-types arg-1 arg-2)
-  (cond
-    [(and (equal? arg-1 param) (equal? arg-2 param)) (list param param)]
-    [(and (not (equal? arg-1 param)) (equal? arg-2 param)) (list description-type param)]
-    [(and (not (equal? arg-2 param)) (not (equal? arg-2 param))) (list description-type description-type)]
-    [(and (equal? arg-1 param) (not (equal? arg-2 param))) (list param description-type)]))
-
-(define (create-functor-helper arg-1 arg-2 arg-types functor)
-  (cond
-    [(and (equal? (first arg-types) param) (equal? (second arg-types) param))
-     (lambda (x) (functor x x))]
-    [(and (equal? (first arg-types) param) (equal? (second arg-types) description-type))
-     (lambda (x) (functor x (evaluate-dramatis-description arg-2)))]
-    [(and (equal? (first arg-types) description-type) (equal? (second arg-types) param))
-     (lambda (x) (functor x (evaluate-dramatis-description arg-1)))]
-    [(and (equal? (first arg-types) description-type) (equal? (second arg-types) description-type))
-     (lambda (x) (functor (evaluate-dramatis-description arg-1) (evaluate-dramatis-description arg-2)))]))
 
 ; returns true if and only if the description of the function
 ; is itself a function call. Since funshake requires functions
@@ -340,23 +246,6 @@ In other words, we do eager evaluation but late interpretation.
          [result (op-functor expr1-evaluated expr2-evaluated)])
     result))
 
-; helper that returns true if and only if the dialogue contains
-; a self reference
-(define (is-self-referencing? name dialogue)
-  (let* ([dialogue-as-list (string->list dialogue)]
-         [contains-name (sublist (string->list name) dialogue-as-list)])
-    (if contains-name
-        #t
-        (is-self-referencing-helper dialogue-as-list self-refs))))
-
-; helper for is-self-referencing: check all the self-ref forms
-(define (is-self-referencing-helper dialogue-as-list self-refs-list)
-  (if (null? self-refs-list)
-      #f ; not self referencing
-      (if (number? (sublist (car self-refs-list) (dialogue-as-list)))
-          #t
-          (is-self-referencing-helper dialogue-as-list (cdr self-refs-list)))))
-
 (define (get-function-name-and-arg dialogue)
   (let* ([the-song (normalize-line (car (string-split dialogue call)))]
          [the-lyrics (string-split the-song)]
@@ -364,47 +253,15 @@ In other words, we do eager evaluation but late interpretation.
          [the-argument (foldr (lambda (x y) (string-append " " (string-append x y))) "" (cddr the-lyrics))])
     (list the-name the-argument)))
 
-(define (evaluate-description dialogue dramatis-personae-map)
-  (void))
-
 (define (evaluate-name speaker dialogue dramatis-personae-map [hamlet (void)])
   (cond [(is-self-ref? dialogue) (evaluate-name speaker speaker dramatis-personae-map hamlet)]
         [(and (not (void? hamlet)) (equal? dialogue param)) hamlet]
         [else (second (first (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map)))]))
 
-(define (evaluate-function-call speaker dialogue function-name function-argument settings-map dramatis-personae-map)
-  (let* ([func-body (get-func-body function-name settings-map)] ; get function body
-         [arg-type (get-arg-type function-argument )]
-         [arg-val (cond [(equal? arg-type description-type) (evaluate-dramatis-description function-argument)]
-                         [(or (equal? arg-type add) (equal? arg-type add)) (evaluate-top-level-arithmetic speaker function-argument arg-type dramatis-personae-map)]
-                         [(equal? arg-type lookup-type) (evaluate-name function-argument)])])
-    (call-function func-body arg-val settings-map dramatis-personae-map)))
-
-(define (get-arg-type function-argument dramatis-personae-map)
-  (cond [(is-description function-argument) description-type]
-                         [(is-arithmetic function-argument)
-                          (typeof-arithmetic function-argument)]
-                         [(= 1 (length (string-split function-argument)))
-                          (if (is-name-lookup? function-argument dramatis-personae-map) lookup-type description-type)]))
-
-(define (call-function)
-  (void))
-
 ; returns the value of the pair in the settings map with function name as the name
 ; precondition: function-name is a valid function name
 (define (get-func-body function-name settings-map)
   (second (first (filter (lambda (pair) (equal? (first pair) function-name)) settings-map))))
-
-(define (evaluate-expr expr name dramatis-personae-map)
-  (let* (
-         [word-count (length (string-split expr))] ; how many words are in the expression?
-         [is-name-lookup (if (= word-count 1) (is-name-lookup? expr dramatis-personae-map) #f)] ; is it a name lookup?
-         [name-lookup-value (if is-name-lookup (evaluate-name name expr dramatis-personae-map) #f)] ; if it is a lookup, what is the value?
-         [is-description (or (not is-name-lookup) (> word-count 1))] ; is it a description?
-         )
-    (if is-name-lookup
-        name-lookup-value
-        (evaluate-dramatis-description expr))))
 
 (define (is-self-ref? dialogue)
   (if (member dialogue self-refs)
@@ -417,11 +274,6 @@ In other words, we do eager evaluation but late interpretation.
             0
             (length (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map))))
       (equal? dialogue param)))
-
-; returns true if and only if the text is a description
-; in particular, it cannot be a functor call or an arithmetic expression
-(define (is-description text)
-  (and (not (is-arithmetic text)) (not (is-functor-call text))))
 
 ; returns true if and only if text is of arithmetic type
 (define (is-arithmetic text)
@@ -457,30 +309,6 @@ In other words, we do eager evaluation but late interpretation.
           (cons (car lst) (get-elements-until (cdr lst) i2))
           (list))))
 
-; helper function for starts-with: checks if str-list starts
-; with start-list
-(define (list-starts-with start-list str-list)
-  (if (null? str-list)
-      #f
-      (if (null? start-list)
-          #t
-          (if (equal? (car start-list) (car str-list))
-              (and #t (list-starts-with (cdr start-list) (cdr str-list)))
-              #f))))
-
-(define (add-functor num bool)
-  (if (and (boolean? bool) (equal? bool #f))
-      #f
-      (+ num bool)))
-
-; ex1 import
-(define (sublist sub lst)
-  (cond ((null? sub) 0)
-        ((null? lst) #f)
-        ((list-starts-with sub lst) 0)
-        ((not (list-starts-with sub lst)) (add-functor 1 (sublist sub (cdr lst))))
-        ))
-
 #|
 (remove-last-char string)
   string: a string
@@ -497,3 +325,4 @@ In other words, we do eager evaluation but late interpretation.
 ;(define gsettings (get-settings bdy))
 ;(define name-dialogue-pairs (get-name-dialogue-pairs bdy (list)))
 (define body2 (interpret "functions.txt"))
+body2
