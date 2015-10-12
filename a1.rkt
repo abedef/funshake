@@ -131,7 +131,7 @@ Read through the starter code carefully. In particular, look for:
   (let* ([dramatis-personae (get-dramatis-personae body)]
          [settings (get-settings body)]
          [dialogues (get-dialogues body dramatis-personae settings)])
-    body))
+    dialogues))
 
 #|
   This section of the code is to get the dramatis personae
@@ -300,7 +300,7 @@ In other words, we do eager evaluation but late interpretation.
 ; name lookups, etc.)
 (define (get-dialogues body dramatis-personae-map settings-map)
   (let* ([name-dialogue-pairs (get-name-dialogue-pairs body (list))])
-    (map (evaluate-dialogue dramatis-personae-map settings-map) name-dialogue-pairs)))
+    (map (lambda (pair) (eval-pair (first pair) (second pair) dramatis-personae-map settings-map)) name-dialogue-pairs)))
 
 ; helper function that takes the body of the program
 ; and returns a list of name dialogue pairs that are supposed
@@ -316,29 +316,29 @@ In other words, we do eager evaluation but late interpretation.
 ; and returns a lambda that takes in a name-dialogue pair
 ; that is able to evaluate the dialogue. evaluating the dialogue
 ; is the heart of a funshake program
-(define (evaluate-dialogue dramatis-personae-map settings-map)
-  (lambda (name-dialogue-pair)
-    (let* (
-           ; general dialogue info
-           [name (first name-dialogue-pair)] ; the name of the person talking
-           [dialogue (second name-dialogue-pair)] ; the dialogue: what the person is saying
-           
-           ; function call info
-           [is-function-call (is-functor-call dialogue)] ; #t if the dialogue is a function call
-           [function-name-and-arg (get-function-name-and-arg dialogue)]
-           [function-name (if is-function-call (first function-name-and-arg) #f)] ; name of the function if there is a function call
-           [function-argument (if is-function-call (second function-name-and-arg) #f)] ; the argument to the function if it exists
-           
-           ; arithmetic info
-           [is-top-level-arithmetic (if (and (not is-function-call) (is-arithmetic dialogue)) #t #f)] ; #t if the dialogue has top level arithmetic, #f otherwise
-           [arithmetic-type (if is-top-level-arithmetic (typeof-arithmetic dialogue) #f)] ; type of arithmetic: + or *
-           
-           ; other info
-           [is-description (if (and (not is-function-call) (not is-top-level-arithmetic)) #t #f)] ; easy case: dialogue is simply a description to be evaluated
-           )
-      (cond [is-description (evaluate-dramatis-description dialogue)]
-            [is-function-call (evaluate-function-call name dialogue function-name function-argument settings-map dramatis-personae-map)]
-            [is-top-level-arithmetic (evaluate-top-level-arithmetic name dialogue arithmetic-type dramatis-personae-map)]))))
+(define (eval-pair speaker dialogue dramatis-personae-map settings-map [hamlet (void)])
+  (cond [(is-functor-call dialogue)
+         (let* ([function-name-and-arg (get-function-name-and-arg dialogue)]
+           [function-name (if (is-functor-call dialogue) (first function-name-and-arg) #f)] ; name of the function if there is a function call
+           [function-argument (if (is-functor-call dialogue) (second function-name-and-arg) #f)] ; the argument to the function if it exists
+           ) (eval-function speaker function-name function-argument dramatis-personae-map settings-map hamlet))] ; todo : change arguments to eval-func-call
+        [(is-arithmetic dialogue) (evaluate-top-level-arithmetic speaker dialogue (typeof-arithmetic dialogue) dramatis-personae-map settings-map hamlet)]
+        [(and (= 1 (length (string-split dialogue))) (is-name-lookup? dialogue dramatis-personae-map)) (evaluate-name speaker dialogue dramatis-personae-map hamlet)]
+        [else (evaluate-dramatis-description dialogue)]))
+
+(define (eval-function speaker function-name function-argument dramatis-personae-map settings-map [hamlet (void)])
+  (eval-pair speaker (get-func-body function-name settings-map) dramatis-personae-map
+             settings-map (eval-pair speaker function-argument dramatis-personae-map settings-map)))
+
+(define (evaluate-top-level-arithmetic name dialogue arithmetic-type dramatis-personae-map settings-map [hamlet (void)])
+  (let* ([op-functor (if (equal? arithmetic-type add) + *)]
+         [exprs (string-split dialogue arithmetic-type)]
+         [expr1 (normalize-line (first exprs))]
+         [expr2 (normalize-line (second exprs))]
+         [expr1-evaluated (eval-pair name expr1 dramatis-personae-map settings-map hamlet)]
+         [expr2-evaluated (eval-pair name expr2 dramatis-personae-map settings-map hamlet)]
+         [result (op-functor expr1-evaluated expr2-evaluated)])
+    result))
 
 ; helper that returns true if and only if the dialogue contains
 ; a self reference
@@ -361,42 +361,39 @@ In other words, we do eager evaluation but late interpretation.
   (let* ([the-song (normalize-line (car (string-split dialogue call)))]
          [the-lyrics (string-split the-song)]
          [the-name (first the-lyrics)]
-         [the-argument (cdr the-lyrics)])
+         [the-argument (foldr (lambda (x y) (string-append " " (string-append x y))) "" (cddr the-lyrics))])
     (list the-name the-argument)))
 
 (define (evaluate-description dialogue dramatis-personae-map)
   (void))
 
-(define (evaluate-name speaker dialogue dramatis-personae-map)
-  (if (is-self-ref? dialogue)
-      (evaluate-name speaker speaker dramatis-personae-map)
-      (second (first (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map)))))
+(define (evaluate-name speaker dialogue dramatis-personae-map [hamlet (void)])
+  (cond [(is-self-ref? dialogue) (evaluate-name speaker speaker dramatis-personae-map hamlet)]
+        [(and (not (void? hamlet)) (equal? dialogue param)) hamlet]
+        [else (second (first (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map)))]))
 
 (define (evaluate-function-call speaker dialogue function-name function-argument settings-map dramatis-personae-map)
   (let* ([func-body (get-func-body function-name settings-map)] ; get function body
-         [arg-type (cond [(is-description function-argument) description-type]
-                         [(is-arithmetic function-argument) (typeof-arithmetic function-argument)]
-                         [(= 1 (length (string-split function-argument))) (if (is-name-lookup? function-argument dramatis-personae-map) lookup-type description-type)])]
+         [arg-type (get-arg-type function-argument )]
          [arg-val (cond [(equal? arg-type description-type) (evaluate-dramatis-description function-argument)]
                          [(or (equal? arg-type add) (equal? arg-type add)) (evaluate-top-level-arithmetic speaker function-argument arg-type dramatis-personae-map)]
                          [(equal? arg-type lookup-type) (evaluate-name function-argument)])])
     (call-function func-body arg-val settings-map dramatis-personae-map)))
 
+(define (get-arg-type function-argument dramatis-personae-map)
+  (cond [(is-description function-argument) description-type]
+                         [(is-arithmetic function-argument)
+                          (typeof-arithmetic function-argument)]
+                         [(= 1 (length (string-split function-argument)))
+                          (if (is-name-lookup? function-argument dramatis-personae-map) lookup-type description-type)]))
+
+(define (call-function)
+  (void))
+
 ; returns the value of the pair in the settings map with function name as the name
 ; precondition: function-name is a valid function name
 (define (get-func-body function-name settings-map)
   (second (first (filter (lambda (pair) (equal? (first pair) function-name)) settings-map))))
-  
-
-(define (evaluate-top-level-arithmetic name dialogue arithmetic-type dramatis-personae-map)
-  (let* ([op-functor (if (equal? arithmetic-type add) + *)]
-         [exprs (string-split dialogue arithmetic-type)]
-         [expr1 (normalize-line (first exprs))]
-         [expr2 (normalize-line (second exprs))]
-         [expr1-evaluated (evaluate-expr expr1 name dramatis-personae-map)]
-         [expr2-evaluated (evaluate-expr expr2 name dramatis-personae-map)]
-         [result (op-functor expr1-evaluated expr2-evaluated)])
-    result))
 
 (define (evaluate-expr expr name dramatis-personae-map)
   (let* (
@@ -494,8 +491,9 @@ In other words, we do eager evaluation but late interpretation.
       string
       (substring string 0 (- (string-length string) 1))))
 
-(define bdy (interpret "functions.txt"))
-(define functors (get-elements-between bdy settings finis))
-(define dramatis (get-dramatis-personae bdy))
-(define gsettings (get-settings bdy))
-(define name-dialogue-pairs (get-name-dialogue-pairs bdy (list)))
+(define body (interpret "functions.txt"))
+;(define functors (get-elements-between body settings finis))
+;(define dramatis (get-dramatis-personae body))
+;(define gsettings (get-settings bdy))
+;(define name-dialogue-pairs (get-name-dialogue-pairs bdy (list)))
+(define body2 (interpret "sample.txt"))
