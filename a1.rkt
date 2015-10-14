@@ -143,7 +143,7 @@ Read through the starter code carefully. In particular, look for:
 |#
 
 #|
-  (get-dramatis-personae body)
+(get-dramatis-personae body)
   body: the list of semantically meaningful lines in a funshake file.
 
   Returns a map (i.e a list of (name, value) pairs) where the name/key is
@@ -155,11 +155,11 @@ Read through the starter code carefully. In particular, look for:
   (map evaluate-dramatis (get-elements-between body personae finis)))
 
 #|
-  (evaluate-dramatis dramatis)
+(evaluate-dramatis dramatis)
   dramatis: a dramatis personae line extracted from the Dramatis Personae section
   in a funshake file.
 
-  Returns a (name, value) pair where the name is the name of the person in the play
+  Returns a list of (name, value) pairs where the name is the name of the person in the play
   and value is the value of their description, as calculated by evaluate-dramatis-description.
 |#
 (define (evaluate-dramatis dramatis)
@@ -169,7 +169,7 @@ Read through the starter code carefully. In particular, look for:
     (list name (evaluate-dramatis-description description))))
 
 #|
-  (evaluate-dramatis-description description)
+(evaluate-dramatis-description description)
   description: the description of a person declared in the dramatis personae
   section of a funshake file.
 
@@ -184,7 +184,7 @@ Read through the starter code carefully. In particular, look for:
     (calculate-description description-length bad-adjective-count)))
 
 #|
-  (calculate-description description-length bad-adjective-count)
+(calculate-description description-length bad-adjective-count)
   description-length: the number of words in the description we want to evaluate.
   bad-adjective-count: the number of bad adjectives in the description we want to evaluate.
 
@@ -197,7 +197,7 @@ Read through the starter code carefully. In particular, look for:
       (* -1 (expt 2 bad-adjective-count) description-length)))
 
 #|
-  (count-bad-adjectives description-list)
+(count-bad-adjectives description-list)
   description-list: the description of a character in the play as a list of strings.
 
   Returns the number of bad adjectives in the given description.
@@ -206,14 +206,11 @@ Read through the starter code carefully. In particular, look for:
   (length (filter (lambda (str) (not (equal? (member str bad-words) #f))) description-list)))
 
 #|
-  
-  This section is for obtaining the settings section of a 
-  funshake file (if it exists).
-
+  This section is for obtaining the settings section of a funshake file (if it exists).
 |#
 
 #|
-  (get-settings body)
+(get-settings body)
   body: the list of semantically meaningful lines in a funshake file.
 
   Returns a list of (name, value) pairs where 'name' is the name of the
@@ -223,11 +220,11 @@ Read through the starter code carefully. In particular, look for:
   (map evaluate-setting (get-elements-between body settings finis)))
 
 #|
-  (evaluate-setting setting)
+(evaluate-setting setting)
   setting: a line of text that lies between the Settings and Finis lines in a funshake file.
 
-  Returns a (name, value) pair where 'name' refers to the name of the setting and 'value'
-  refers to its definition.
+  Returns a list of (name, value) pairs where 'name' refers to the name of the setting
+  and 'value' refers to its definition.
 |#
 (define (evaluate-setting setting)
   (let* ([name-description-pair (string-split setting ",")]
@@ -236,7 +233,7 @@ Read through the starter code carefully. In particular, look for:
     (list name description))) ; defer functor evaluation until we get to dialogue
 
 #|
-  (is-functor-call text)
+(is-functor-call text)
   text: a segment of semantically meaningful funshake text. This could be within a function
   definition or a line of dialogue.
 
@@ -246,7 +243,7 @@ Read through the starter code carefully. In particular, look for:
   (prefix? call text))
 
 #|
-  (get-dialogues body dramatis-personae-map settings-map)
+(get-dialogues body dramatis-personae-map settings-map)
   body: the list of semantically meaningful lines in a funshake text file.
   dramatis-personae-map: the map obtained after calling get-dramatis-personae above, which
   is a list of (name, value) pairs where 'name' refers to the name of the person in the play,
@@ -261,7 +258,7 @@ Read through the starter code carefully. In particular, look for:
     (map (lambda (pair) (eval-pair (first pair) (second pair) dramatis-personae-map settings-map)) name-dialogue-pairs)))
 
 #|
-  (get-name-dialogue-pairs body acc)
+(get-name-dialogue-pairs body acc)
   body: the list of semantically meaningful lines in a funshake file.
   acc: accumulator list that must be initially empty that accumulates (speaker, dialogue) pairs
   from the funshake file.
@@ -277,7 +274,7 @@ Read through the starter code carefully. In particular, look for:
           (get-name-dialogue-pairs (cdr body) acc))))
 
 #|
-  (eval-pair speaker dialogue dramatis-personae-map settings-map [hamlet])
+(eval-pair speaker dialogue dramatis-personae-map settings-map [hamlet])
   speaker: the speaker of the dialogue we are currently evaluating
   dialogue: the dialogue we want to evaluate.
   dramatis-personae-map: the map obtained after calling get-dramatis-personae above, which
@@ -287,7 +284,6 @@ Read through the starter code carefully. In particular, look for:
   hamlet: optional paramter that is passed only when functions are called: if it is not needed, then it is not used.
 
   Returns the value of the given dialogue as a number, as specified in the functional shakespeare specification.
-
 |#
 (define (eval-pair speaker dialogue dramatis-personae-map settings-map [hamlet (void)])
   (cond [(is-functor-call dialogue)
@@ -300,7 +296,7 @@ Read through the starter code carefully. In particular, look for:
         [else (evaluate-dramatis-description dialogue)]))
 
 #|
-  (eval-function speaker function-name function-argument dramatis-personae-map settings-map [hamlet])
+(eval-function speaker function-name function-argument dramatis-personae-map settings-map [hamlet])
   speaker: current speaker of the dialogue
   function-name: the name of the function we want to evaluate.
   function-argument: the argument to the function we want to evaluate.
@@ -317,7 +313,7 @@ Read through the starter code carefully. In particular, look for:
              settings-map (eval-pair speaker function-argument dramatis-personae-map settings-map hamlet)))
 
 #|
-  (evaluate-top-level-arithmetic name dialogue arithmetic-type dramatis-personae-map settings-map [hamlet])
+(evaluate-top-level-arithmetic name dialogue arithmetic-type dramatis-personae-map settings-map [hamlet])
   name: name of the current speaker of the dialogue
   dialogue: the dialogue we want to evaluate.
   arithmetic-type: the type of arithmetic we are evaluating (could be + or *)
@@ -340,7 +336,7 @@ Read through the starter code carefully. In particular, look for:
     result))
 
 #|
-  (get-function-name-and-arg dialogue)
+(get-function-name-and-arg dialogue)
   dialogue: a piece of dialogue/function definition that contains a function call.
 
   Returns a name value pair with the name of the function as the first of the pair, and 
@@ -354,7 +350,7 @@ Read through the starter code carefully. In particular, look for:
     (list the-name the-argument)))
 
 #|
-  (evaluate-name speaker dialogue dramatis-personae-map [hamlet])
+(evaluate-name speaker dialogue dramatis-personae-map [hamlet])
   speaker: the speaker whose dialogue we want to evaluate
   dialogue: a semantically meaningful expression in funshake
   dramatis-personae-map: the map obtained after calling get-dramatis-personae above, which
@@ -372,7 +368,7 @@ Read through the starter code carefully. In particular, look for:
         [else (second (first (filter (lambda (pair) (equal? (first pair) dialogue)) dramatis-personae-map)))]))
 
 #|
-  (get-func-body function-name settings-map)
+(get-func-body function-name settings-map)
   function-name: the name of the function we want to look up.
   settings-map: the map obtained after calling get-settings above.
 
@@ -385,7 +381,7 @@ Read through the starter code carefully. In particular, look for:
   (second (first (filter (lambda (pair) (equal? (first pair) function-name)) settings-map))))
 
 #|
-  (is-self-ref? dialogue)
+(is-self-ref? dialogue)
   dialogue: semantically meaningful funshake.
 
   Return true if an only if the given dialogue is a self reference.
