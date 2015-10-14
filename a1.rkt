@@ -257,7 +257,7 @@ Read through the starter code carefully. In particular, look for:
   file.
 |#
 (define (get-dialogues body dramatis-personae-map settings-map)
-  (let* ([name-dialogue-pairs (get-name-dialogue-pairs body (list))])
+  (let ([name-dialogue-pairs (get-name-dialogue-pairs body (list))])
     (map (lambda (pair) (eval-pair (first pair) (second pair) dramatis-personae-map settings-map)) name-dialogue-pairs)))
 
 #|
