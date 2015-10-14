@@ -58,6 +58,8 @@ Read through the starter code carefully. In particular, look for:
 ; Function parameter name
 (define param "Hamlet")
 
+; constants that identify types of 
+; expressions in a funshake program
 (define description-type "description")
 (define lookup-type "lookup")
 
@@ -292,7 +294,7 @@ Read through the starter code carefully. In particular, look for:
          (let* ([function-name-and-arg (get-function-name-and-arg dialogue)]
            [function-name (if (is-functor-call dialogue) (first function-name-and-arg) #f)] ; name of the function if there is a function call
            [function-argument (if (is-functor-call dialogue) (second function-name-and-arg) #f)] ; the argument to the function if it exists
-           ) (eval-function speaker function-name function-argument dramatis-personae-map settings-map hamlet))] ; todo : change arguments to eval-func-call
+           ) (eval-function speaker function-name function-argument dramatis-personae-map settings-map hamlet))] ; evaluate the function
         [(is-arithmetic dialogue) (evaluate-top-level-arithmetic speaker dialogue (typeof-arithmetic dialogue) dramatis-personae-map settings-map hamlet)]
         [(and (= 1 (length (string-split dialogue))) (is-name-lookup? dialogue dramatis-personae-map)) (evaluate-name speaker dialogue dramatis-personae-map hamlet)]
         [else (evaluate-dramatis-description dialogue)]))
@@ -475,14 +477,13 @@ Read through the starter code carefully. In particular, look for:
       string
       (substring string 0 (- (string-length string) 1))))
 
+#|
+(remove-first-char string)
+  string: a string
+
+  Returns string with its first character removed.
+|#
 (define (remove-first-char string)
   (if (equal? (string-length string) 0)
       string
       (substring string 1 (string-length string))))
-
-;(define functors (get-elements-between body settings finis))
-;(define dramatis (get-dramatis-personae body))
-;(define gsettings (get-settings bdy))
-;(define name-dialogue-pairs (get-name-dialogue-pairs bdy (list)))
-(define body2 (interpret "functions.txt"))
-body2

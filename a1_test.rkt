@@ -46,7 +46,5 @@
         16
         -20))
 
-(test (interpret "test1.funshake")
-      '(11 7 11 8 2 -26 5 -160))
-
 (interpret "test1.funshake")
+(interpret "part1.txt")
